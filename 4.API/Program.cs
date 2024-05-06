@@ -1,3 +1,4 @@
+using _2.Core;
 using _2.Core.Extensions;
 using _3.Infra;
 using _3.Infra.Extensions;
@@ -16,11 +17,24 @@ builder.Services.AddSwaggerGen();
 
 // builder.Services.ConfigureInfraOptions();
 
+builder.Services.Configure<MailGunEmailProviderOptions>(
+    builder.Configuration.GetSection(MailGunEmailProviderOptions.ConfigItem));
+
+builder.Services.Configure<SendgridEmailProviderOptions>(
+     builder.Configuration.GetSection(SendgridEmailProviderOptions.ConfigItem));
+
 #endregion
 
 #region Configure DI Container - Service Lifetimes - Infra
 
 builder.Services.AddInfraDependencyInjection(builder.Configuration);
+
+builder.Services.AddTransient<ITransientService, TransientService>();
+builder.Services.AddScoped<IScopedService, ScopedService>();
+builder.Services.AddSingleton<ISingletonService, SingletonService>();
+
+// builder.Services.AddTransient<IEmailProvider, SendgridEmailProvider>();
+builder.Services.AddTransient<IEmailProvider, MailGunEmailProvider>();
 
 #endregion
 
@@ -33,7 +47,7 @@ builder.Services.AddCoreDependencyInjection();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if(app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
@@ -51,15 +65,15 @@ app.Run();
 
 async Task SeedDatabase()
 {
-  using (var scope = app.Services.CreateScope())
-  {
-    var dbcontext = 
-      scope.ServiceProvider.GetRequiredService<DataContext>();
-    
-    // Run migration scripts
-    await dbcontext.Database.MigrateAsync();
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbcontext =
+          scope.ServiceProvider.GetRequiredService<DataContext>();
 
-    // Seed data to the project
-    await _3.Infra.Seed.SeedData(dbcontext);
-  }
+        // Run migration scripts
+        await dbcontext.Database.MigrateAsync();
+
+        // Seed data to the project
+        await _3.Infra.Seed.SeedData(dbcontext);
+    }
 }
